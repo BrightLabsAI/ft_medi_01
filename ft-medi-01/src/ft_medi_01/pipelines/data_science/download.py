@@ -7,6 +7,25 @@ logger = logging.getLogger(__name__)
 
 
 def download_model(model_name: str) -> transformers.AutoModelForCausalLM:
+    """
+    Downloads a pre-trained model from Hugging Face's Transformers library and applies the PEFT model to it.
+
+    Args:
+        model_name (str): The name of the pre-trained model to download.
+
+    Returns:
+        transformers.AutoModelForCausalLM: The downloaded and transformed model.
+
+    Raises:
+        None
+
+    Examples:
+        >>> download_model("gpt2")
+        Downloading model gpt2
+        Model parameters: ...
+        <AutoModelForCausalLM>
+
+    """
     logger.info("Downloading model %s", model_name)
     model = transformers.AutoModelForCausalLM.from_pretrained(model_name)
 
@@ -24,7 +43,23 @@ def download_model(model_name: str) -> transformers.AutoModelForCausalLM:
 
 
 def download_tokenizer(model_name: str) -> transformers.AutoTokenizer:
-    logger.info("Downloading tokenizer %s", model_name)
+    """
+    Downloads a tokenizer for the specified model from the Hugging Face Transformers library.
+
+    Args:
+        model_name (str): The name of the pre-trained model whose tokenizer will be downloaded.
+
+    Returns:
+        transformers.AutoTokenizer: The downloaded tokenizer.
+
+    Raises:
+        None
+
+    Examples:
+        >>> download_tokenizer("bert-base-uncased")
+        Downloading tokenizer bert-base-uncased
+        <AutoTokenizer>
+    """
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
     logging.info(tokenizer)
     return tokenizer
