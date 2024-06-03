@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "ft-medi-01"
+version = "0.1.0"
+description = ""
+authors = ["Mike <Mike Watson<mike@brightlabs.ai>>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+kedro = "^0.19.6"
+ipython = ">=8.10"
+jupyterlab = ">=3.0"
+kedro-telemetry = ">=0.3.1"
+notebook = "*"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.4.2"
+isort = "^5.13.2"
+pre-commit = "^3.7.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.project.scripts]
+ft-medi-01 = "ft_medi_01.__main__:main"
+
+[tool.kedro]
+package_name = "ft_medi_01"
+project_name = "ft-medi-01"
+kedro_init_version = "0.19.6"
+tools = ["None",]
+example_pipeline = "False"
+source_dir = "src"
+
+[tool.project.entry-points."kedro.hooks"]
