@@ -22,4 +22,3 @@ commit:
 	$(MAKE) pre-commit
 	# Run cz-commit command to create a new commit
 	$(MAKE) cz-commit
-
