@@ -1,0 +1,69 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "kedro - all",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/ft-medi-01",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "kedro",
+      "args": ["run", "--async"]
+    },
+    // pipelines
+    // data_process pipeline
+    {
+      "name": "kedro - p - data_process",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/ft-medi-01",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "kedro",
+      "args": ["run", "--pipeline", "data_process", "--async"]
+    },
+
+    // data_science pipeline
+    {
+      "name": "kedro - p - data_science",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/ft-medi-01",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "kedro",
+      "args": ["run", "--pipeline", "data_science", "--async"]
+    },
+
+    // nodes
+    // tokenize_training_data node
+    {
+      "name": "kedro - n - tokenize_training_data",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/ft-medi-01",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "kedro",
+      "args": ["run", "--nodes", "tokenize_training_data", "--async"]
+    },
+
+    {
+      "name": "kedro - n - tokenize_and_train",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/ft-medi-01",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "kedro",
+      "args": ["run", "--from-nodes", "tokenize_training_data", "--async"]
+    },
+
+    // pre_process_data node
+    {
+      "name": "kedro - n - pre_process_data",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/ft-medi-01",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "kedro",
+      "args": ["run", "--nodes", "pre_process_data", "--async"]
+    }
+  ]
+}
