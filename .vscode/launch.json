@@ -26,7 +26,6 @@
     {
       "name": "kedro - p - data_science",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}/ft-medi-01",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "kedro",
@@ -38,7 +37,6 @@
     {
       "name": "kedro - n - tokenize_training_data",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}/ft-medi-01",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "kedro",
@@ -48,7 +46,6 @@
     {
       "name": "kedro - n - tokenize_and_train",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}/ft-medi-01",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "kedro",
@@ -59,7 +56,6 @@
     {
       "name": "kedro - n - pre_process_data",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}/ft-medi-01",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "kedro",
