@@ -17,7 +17,16 @@ notebook = "*"
 black = "^24.4.2"
 isort = "^5.13.2"
 pre-commit = "^3.7.1"
+commitizen = "^3.27.0"
 
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "pep440"
+version_provider = "poetry"
+update_changelog_on_bump = true
+major_version_zero = true
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
