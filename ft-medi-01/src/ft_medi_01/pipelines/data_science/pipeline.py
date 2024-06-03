@@ -1,6 +1,8 @@
-from kedro.pipeline import Pipeline, pipeline, node
+from kedro.pipeline import Pipeline, node, pipeline
+
 from .download import download_model, download_tokenizer
 from .train import tokenize_data, train_model
+
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline(

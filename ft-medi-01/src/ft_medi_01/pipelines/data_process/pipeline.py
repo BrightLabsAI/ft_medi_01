@@ -1,5 +1,7 @@
-from kedro.pipeline import Pipeline, pipeline, node
+from kedro.pipeline import Pipeline, node, pipeline
+
 from .nodes import download_from_huggingface, pre_process
+
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline(
@@ -15,6 +17,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["params:data_percent", "raw_medical"],
                 outputs="processed_medical",
                 name="pre_process_data",
-            )
+            ),
         ]
     )

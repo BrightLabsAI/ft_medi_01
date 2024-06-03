@@ -1,6 +1,7 @@
 """ft-medi-01 file for ensuring the package is executable
 as `ft-medi-01` and `python -m ft_medi_01`
 """
+
 import importlib
 from pathlib import Path
 
