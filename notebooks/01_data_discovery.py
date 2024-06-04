@@ -1,3 +1,5 @@
+# Notebooks only used for experimental purposes, not for production use
+
 #%%
 %load_ext kedro.ipython
 # %%

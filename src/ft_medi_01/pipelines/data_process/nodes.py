@@ -54,12 +54,32 @@ def pre_process(params_dataset: dict, df: pd.DataFrame) -> pd.DataFrame:
         <pandas.core.frame.DataFrame>
     """
     logger.info("Pre-processing dataset")
+
+    # sample a percentage of the dataset
     df = df.sample(frac=params_dataset["dataset_percentage"], random_state=42, axis=0)
     logger.warning(f"Using {params_dataset['dataset_percentage']*100}% of the dataset")
 
+    PROMPT_TEMPLATE = """<s>
+    <<SYS>>
+        You are a medical expert, please answer the following question in a friendly manner.
+    <</SYS>>
+    <<QUESTION>>
+        {}
+    <</QUESTION>>
+    <<ANSWER>>
+        {}
+    <</ANSWER>>
+</s>"""
+
+    # remove extra whitespace from the 'output' and 'input' columns
     df["output"] = df["output"].str.replace(r"\s+", " ", regex=True).str.strip()
     df["input"] = df["input"].str.replace(r"\s+", " ", regex=True).str.strip()
 
-    df["text"] = "question: " + df["input"] + "answer: " + df["output"]
-    sdf = df.drop(["input", "output"], axis=1)
-    return sdf
+    # create a new column by concatenating the 'input' and 'output' columns using the template
+    df["text"] = df.apply(
+        lambda x: PROMPT_TEMPLATE.format(x["input"], x["output"]), axis=1
+    )
+
+    # drop the 'input' and 'output' columns
+    df = df.drop(["input", "output"], axis=1)
+    return df
