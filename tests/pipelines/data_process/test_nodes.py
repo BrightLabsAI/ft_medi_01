@@ -1,9 +1,11 @@
-import pandas as pd
 from unittest.mock import MagicMock, patch
+
+import pandas as pd
+
 from ft_medi_01.pipelines.data_process.nodes import download_from_huggingface
 
-class TestDownloadFromHuggingface:
 
+class TestDownloadFromHuggingface:
     @patch("datasets.load_dataset")
     def test_download_from_huggingface(self, mock_load_dataset):
         # Test case: Downloading dataset and converting to pandas DataFrame
