@@ -1,5 +1,5 @@
 dataset:
   dataset_name: "ShenRuililin/MedicalQnA"
-  dataset_percentage: 0.1
+  dataset_percentage: 0.01
 model:
   model_name: "distilbert/distilgpt2"

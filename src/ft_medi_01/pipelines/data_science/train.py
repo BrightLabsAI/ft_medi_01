@@ -6,7 +6,7 @@ import transformers
 from datasets import Dataset
 from pandas import DataFrame
 from peft import LoraConfig, TaskType, get_peft_model, peft_model
-from transformers import BitsAndBytesConfig
+from transformers import BitsAndBytesConfig, DataCollatorForLanguageModeling
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +14,15 @@ logger = logging.getLogger(__name__)
 def tokenize_data(df: DataFrame, tokenizer: transformers.AutoTokenizer) -> Dataset:
     logger.info("Tokenizing dataset")
     tokenizer.pad_token = tokenizer.eos_token
-    text_list = df["text"].tolist()
-    tokenized_data = tokenizer(
-        text_list, truncation=True, padding="max_length", return_tensors="pt"
-    )
-    return tokenized_data
+
+    def tokenize(example):
+        return tokenizer(
+            example["text"], truncation=True, max_length=tokenizer.model_max_length
+        )
+
+    dataset = Dataset.from_pandas(df)
+    tokenized_dataset = dataset.map(tokenize, batched=True, remove_columns=["text"])
+    return tokenized_dataset
 
 
 def prepare_model(params_model: Dict) -> peft_model.PeftModelForCausalLM:
@@ -27,12 +31,13 @@ def prepare_model(params_model: Dict) -> peft_model.PeftModelForCausalLM:
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
     )
+
     model = transformers.AutoModelForCausalLM.from_pretrained(
-        params_model["model_name"], quantization_config=nf4_config
+        params_model["model_name"],
+        trust_remote_code=True,
+        quantization_config=nf4_config,
     )
-    model.gradient_checkpointing_enable()
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
@@ -47,23 +52,35 @@ def prepare_model(params_model: Dict) -> peft_model.PeftModelForCausalLM:
 
 
 def train_model(
-    tokenized_data: Dataset, model: peft_model.PeftModelForCausalLM
+    tokenized_data: Dataset,
+    model: peft_model.PeftModelForCausalLM,
+    tokenizer: transformers.AutoTokenizer,
 ) -> None:
     torch.cuda.empty_cache()
 
+    # create a data collator
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer, mlm=False, return_tensors="pt"
+    )
+
+    tokenizer.pad_token = tokenizer.eos_token
     logger.info("Setting training arguments")
+
     training_args = transformers.TrainingArguments(
         output_dir="model/output",
         eval_strategy="steps",
-        load_best_model_at_end=True,
-        eval_steps=5,
+        eval_steps=5000,
         learning_rate=2e-5,
         weight_decay=0.01,
         logging_dir="model/logs",
-        per_device_train_batch_size=1,
+        per_device_train_batch_size=16,  # Reduced batch size
+        gradient_accumulation_steps=2,  # Added gradient accumulation
     )
-    trainer = transformers.Trainer(model, training_args, train_dataset=[tokenized_data])
-    result = trainer.train()
+
+    trainer = transformers.Trainer(
+        model, training_args, train_dataset=tokenized_data, data_collator=data_collator
+    )
+    trainer.train()
     logger.info("Training completed")
 
     return None

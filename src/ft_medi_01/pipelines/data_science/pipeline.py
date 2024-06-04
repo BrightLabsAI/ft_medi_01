@@ -27,7 +27,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train_model,
-                inputs=["tokenized_training_data", "training_model"],
+                inputs=["tokenized_training_data", "training_model", "tokenizer"],
                 outputs=None,
                 name="train_model",
             ),
