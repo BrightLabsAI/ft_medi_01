@@ -4,7 +4,6 @@
     {
       "name": "kedro - all",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}/ft-medi-01",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "kedro",
@@ -15,7 +14,6 @@
     {
       "name": "kedro - p - data_process",
       "type": "debugpy",
-      "cwd": "${workspaceFolder}/ft-medi-01",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "kedro",
@@ -42,7 +40,6 @@
       "module": "kedro",
       "args": ["run", "--nodes", "tokenize_training_data", "--async"]
     },
-
     {
       "name": "kedro - n - tokenize_and_train",
       "type": "debugpy",
@@ -60,6 +57,6 @@
       "console": "integratedTerminal",
       "module": "kedro",
       "args": ["run", "--nodes", "pre_process_data", "--async"]
-    }
+    },
   ]
 }

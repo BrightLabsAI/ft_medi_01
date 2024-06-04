@@ -1,68 +1,55 @@
 import logging
-import sys
+from typing import Dict
 
 import torch
 import transformers
 from datasets import Dataset
 from pandas import DataFrame
+from peft import LoraConfig, TaskType, get_peft_model, peft_model
+from transformers import BitsAndBytesConfig
 
 logger = logging.getLogger(__name__)
 
 
 def tokenize_data(df: DataFrame, tokenizer: transformers.AutoTokenizer) -> Dataset:
-    """
-    Tokenizes the given DataFrame using the provided tokenizer.
-
-    Args:
-        df (DataFrame): The DataFrame containing the text data to be tokenized.
-        tokenizer (transformers.AutoTokenizer): The tokenizer to be used for tokenization.
-
-    Returns:
-        Dataset: The tokenized data as a Dataset object.
-
-    Raises:
-        None
-
-    Examples:
-        >>> df = pd.DataFrame({'text': ['Hello world', 'How are you']})
-        >>> tokenizer = transformers.AutoTokenizer.from_pretrained('bert-base-uncased')
-        >>> tokenize_data(df, tokenizer)
-        Tokenizing dataset
-        <Dataset>
-    """
     logger.info("Tokenizing dataset")
     tokenizer.pad_token = tokenizer.eos_token
     text_list = df["text"].tolist()
     tokenized_data = tokenizer(
         text_list, truncation=True, padding="max_length", return_tensors="pt"
     )
-
     return tokenized_data
 
 
+def prepare_model(params_model: Dict) -> peft_model.PeftModelForCausalLM:
+    logger.info("Downloading model %s", params_model["model_name"])
+    nf4_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        params_model["model_name"], quantization_config=nf4_config
+    )
+    model.gradient_checkpointing_enable()
+
+    peft_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        inference_mode=False,
+        r=8,
+        lora_alpha=32,
+        lora_dropout=0.1,
+    )
+    model = get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
+    return model
+
+
 def train_model(
-    tokenized_data: Dataset, model: transformers.AutoModelForCausalLM
+    tokenized_data: Dataset, model: peft_model.PeftModelForCausalLM
 ) -> None:
-    """
-    Trains a causal language model using the given tokenized data and model.
-
-    Args:
-        tokenized_data (Dataset): The tokenized dataset to train the model on.
-        model (transformers.AutoModelForCausalLM): The causal language model to train.
-
-    Returns:
-        None
-
-    Raises:
-        None
-
-    Examples:
-        >>> tokenized_data = ...
-        >>> model = transformers.AutoModelForCausalLM.from_pretrained('bert-base-uncased')
-        >>> train_model(tokenized_data, model)
-        Training model
-        <AutoModelForCausalLM>
-    """
+    torch.cuda.empty_cache()
 
     logger.info("Setting training arguments")
     training_args = transformers.TrainingArguments(
@@ -72,13 +59,11 @@ def train_model(
         eval_steps=5,
         learning_rate=2e-5,
         weight_decay=0.01,
-        no_cuda=False if not torch.cuda.is_available() else True,
         logging_dir="model/logs",
+        per_device_train_batch_size=1,
     )
-    #
     trainer = transformers.Trainer(model, training_args, train_dataset=[tokenized_data])
     result = trainer.train()
-
     logger.info("Training completed")
 
     return None

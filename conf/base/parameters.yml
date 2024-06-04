@@ -1,3 +1,5 @@
-dataset_name: "ShenRuililin/MedicalQnA"
-data_percent: 0.1 # 10% of the dataset to be used
-model_name: "distilbert/distilgpt2"
+dataset:
+  dataset_name: "ShenRuililin/MedicalQnA"
+  dataset_percentage: 0.1
+model:
+  model_name: "distilbert/distilgpt2"

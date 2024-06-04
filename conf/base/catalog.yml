@@ -11,12 +11,13 @@ processed_medical:
   type: pandas.CSVDataset
   filepath: data/02_preprocessed/01.csv
 
-training_model_raw:
-  type: pickle.PickleDataset
-  filepath: data/03_models/raw_model.pkl
-  backend: pickle
-
 tokenizer:
   type: pickle.PickleDataset
   filepath: data/03_models/tokenizer.pkl
   backend: pickle
+
+tokenized_training_data:
+  type: MemoryDataset
+
+training_model:
+  type: MemoryDataset

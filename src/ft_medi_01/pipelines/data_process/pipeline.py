@@ -23,13 +23,13 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=download_from_huggingface,
-                inputs="params:dataset_name",
+                inputs="params:dataset",
                 outputs="raw_medical",
                 name="download_data",
             ),
             node(
                 func=pre_process,
-                inputs=["params:data_percent", "raw_medical"],
+                inputs=["params:dataset", "raw_medical"],
                 outputs="processed_medical",
                 name="pre_process_data",
             ),
