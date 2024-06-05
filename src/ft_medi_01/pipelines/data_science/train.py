@@ -87,6 +87,7 @@ def prepare_model(
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         inference_mode=False,
+        target_modules=params_model_optimization["lora"]["target_modules"],
         r=params_model_optimization["lora"]["r"],
         lora_alpha=params_model_optimization["lora"]["lora_alpha"],
         lora_dropout=params_model_optimization["lora"]["lora_dropout"],

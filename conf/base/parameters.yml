@@ -13,6 +13,7 @@ model_optimization:
     r: 8
     lora_alpha: 32
     lora_dropout: 0.1
+    target_modules: ['q_proj', 'k_proj', 'v_proj', 'ffn', 'intermediate', 'layer_norm']
 
 model_training:
   eval_steps: 5000
