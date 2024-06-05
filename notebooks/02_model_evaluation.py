@@ -1,6 +1,6 @@
 # %%
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from peft import PeftConfig, PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 # Load the saved model and tokenizer
 model = AutoModelForCausalLM.from_pretrained("../model/output/model")
@@ -20,7 +20,7 @@ prompt = """<s>
 """
 # %%
 generated_text = medical_text_generator(
-    prompt, 
+    prompt,
     max_length=500,
     num_return_sequences=1)
 
