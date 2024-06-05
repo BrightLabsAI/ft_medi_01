@@ -31,7 +31,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                     "tokenized_training_data",
                     "training_model",
                     "tokenizer",
-                    "params:model_training",
+                    "params:dataset",
                 ],
                 outputs=None,
                 name="train_model",

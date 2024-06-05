@@ -1,35 +1,32 @@
 import logging
+import os
+from datetime import datetime
 from typing import Dict
 
+import optuna
 import torch
 import transformers
 from datasets import Dataset
 from pandas import DataFrame
 from peft import LoraConfig, TaskType, get_peft_model, peft_model
 from transformers import BitsAndBytesConfig, DataCollatorForLanguageModeling
+from unique_names_generator import get_random_name
+from unique_names_generator.data import ADJECTIVES, STAR_WARS
+
+import wandb
 
 logger = logging.getLogger(__name__)
+os.environ["WANDB_PROJECT"] = "ft_medi_01"
+
+
+def get_random_run_name() -> str:
+    run_name = get_random_name(
+        combo=[ADJECTIVES, STAR_WARS], separator="_", style="lowercase"
+    ).replace(" ", "_")
+    return run_name
 
 
 def tokenize_data(df: DataFrame, tokenizer: transformers.AutoTokenizer) -> Dataset:
-    """
-    Tokenizes the data using the given tokenizer.
-
-    Args:
-        df (DataFrame): The data to tokenize.
-        tokenizer (transformers.AutoTokenizer): The tokenizer to use.
-
-    Returns:
-        Dataset: The tokenized data.
-
-    Raises:
-        None
-
-    Examples:
-        >>> tokenize_data(df, tokenizer)
-        Tokenizing dataset
-        <None>
-    """
     logger.info("Tokenizing dataset")
     tokenizer.pad_token = tokenizer.eos_token
 
@@ -47,25 +44,6 @@ def prepare_model(
     params_model: Dict,
     params_model_optimization: Dict,
 ) -> peft_model.PeftModelForCausalLM:
-    """
-    Prepares the model for training by loading the model, setting the peft configuration, and printing the number of trainable parameters.
-
-    Args:
-        params_model (Dict): The parameters for the model.
-        params_model_optimization (Dict): The parameters for the model optimization.
-
-    Returns:
-        peft_model.PeftModelForCausalLM: The prepared model.
-
-    Raises:
-        None
-
-    Examples:
-        >>> prepare_model("model_name", "model_optimization")
-        Downloading model model_name
-        Setting peft configuration
-        <peft.model.peft_model.PeftModelForCausalLM>
-    """
     logger.info("Downloading model %s", params_model["model_name"])
     nf4_config = BitsAndBytesConfig(
         load_in_4bit=params_model_optimization["quantization"]["load_in_4bit"],
@@ -75,6 +53,7 @@ def prepare_model(
         bnb_4bit_use_double_quant=params_model_optimization["quantization"][
             "bnb_4bit_use_double_quant"
         ],
+        bnb_4bit_compute_dtype=torch.float16,
     )
     model = transformers.AutoModelForCausalLM.from_pretrained(
         params_model["model_name"],
@@ -87,7 +66,6 @@ def prepare_model(
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         inference_mode=False,
-        target_modules=params_model_optimization["lora"]["target_modules"],
         r=params_model_optimization["lora"]["r"],
         lora_alpha=params_model_optimization["lora"]["lora_alpha"],
         lora_dropout=params_model_optimization["lora"]["lora_dropout"],
@@ -98,60 +76,51 @@ def prepare_model(
     return model
 
 
-def train_model(
+def objective(
+    trial: optuna.Trial,
     tokenized_data: Dataset,
-    model: peft_model.PeftModelForCausalLM,
+    model: transformers.PreTrainedModel,
     tokenizer: transformers.AutoTokenizer,
-    params_model_training: Dict,
-) -> None:
-    """
-    Trains the model on the tokenized data.
+) -> float:
+    params_model_training = {
+        "no_of_epochs": trial.suggest_int("no_of_epochs", 1, 10),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-5, 5e-5, log=True),
+        "weight_decay": trial.suggest_float("weight_decay", 0.001, 0.05),
+        "per_device_train_batch_size": trial.suggest_int(
+            "per_device_train_batch_size", 2, 4
+        ),
+        "fp16": trial.suggest_categorical("fp16", [True, False]),
+        "gradient_accumulation_steps": trial.suggest_int(
+            "gradient_accumulation_steps", 1, 4
+        ),
+        "warmup_ratio": trial.suggest_float("warmup_ratio", 0.0, 0.2),
+    }
 
-    Args:
-        tokenized_data (Dataset): The tokenized data to train on.
-        model (peft_model.PeftModelForCausalLM): The model to train.
-        tokenizer (transformers.AutoTokenizer): The tokenizer used to tokenize the data.
-        params_model_training (Dict): The parameters for the model training.
-
-    Returns:
-        None
-
-    Raises:
-        None
-
-    Examples:
-        >>> train_model(tokenized_data, model, tokenizer, "model_optimization")
-        Setting training arguments
-        Training model
-        <None>
-    """
-    # Free up some memory
-    torch.cuda.empty_cache()
+    tokenizer.pad_token = tokenizer.eos_token
 
     # Create data collator for training.
-    # The data collator is used to pad the inputs and targets during the training process.
     data_collator = DataCollatorForLanguageModeling(
         tokenizer, mlm=False, return_tensors="pt"
     )
 
+    wandb.init(config=params_model_training, name=get_random_run_name())
     # Set training arguments
-    tokenizer.pad_token = tokenizer.eos_token
-    logger.info("Setting training arguments")
-
     training_args = transformers.TrainingArguments(
-        output_dir="model/output",
-        eval_strategy="steps",
-        eval_steps=params_model_training["eval_steps"],
+        output_dir="model/output/trial",
+        logging_dir="model/logs",
+        num_train_epochs=params_model_training["no_of_epochs"],
         learning_rate=params_model_training["learning_rate"],
         weight_decay=params_model_training["weight_decay"],
-        logging_dir="model/logs",
-        per_device_train_batch_size=params_model_training["batch_size"],
+        per_device_train_batch_size=params_model_training[
+            "per_device_train_batch_size"
+        ],
+        fp16=params_model_training["fp16"],
         gradient_accumulation_steps=params_model_training[
             "gradient_accumulation_steps"
         ],
-        fp16=params_model_training["fp16"],
-        # report_to="wandb",
-        # run_name="FT-Medi-01",
+        warmup_ratio=params_model_training["warmup_ratio"],
+        report_to="wandb",
+        logging_steps=50,
     )
 
     # Train the model
@@ -160,10 +129,85 @@ def train_model(
         training_args,
         train_dataset=tokenized_data,
         data_collator=data_collator,
-        strategy="ddp",
     )
     logger.info("Training model")
-    # trainer.train()
+    train_result = trainer.train()
     logger.info("Training completed")
+
+    train_loss = train_result.metrics["train_loss"]
+
+    # Finish the W&B run
+    wandb.run.finish()
+
+    # Return the best training loss to minimize
+    return train_loss
+
+
+def train_model(
+    tokenized_data: Dataset,
+    model: transformers.PreTrainedModel,
+    tokenizer: transformers.AutoTokenizer,
+    params_dataset: Dict,
+) -> None:
+    torch.cuda.empty_cache()
+
+    # tokenized_parameter_data is 20% of the tokenized_data
+    tokenized_parameter_data = tokenized_data.shuffle().select(
+        range(
+            0,
+            int(
+                params_dataset["hyperparameter_search_percentage"] * len(tokenized_data)
+            ),
+        )
+    )
+    study = optuna.create_study(
+        direction="minimize",
+        pruner=optuna.pruners.MedianPruner(
+            n_startup_trials=5, n_warmup_steps=30, interval_steps=10
+        ),
+    )
+    study.optimize(
+        lambda trial: objective(trial, tokenized_parameter_data, model, tokenizer),
+        n_trials=20,
+    )
+
+    logger.info(f"Best trial: {study.best_trial.params}")
+    best_params = study.best_trial.params
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer, mlm=False, return_tensors="pt"
+    )
+
+    tokenizer.pad_token = tokenizer.eos_token
+    logger.info("Setting training arguments")
+
+    wandb.init(name=get_random_run_name())
+    training_args = transformers.TrainingArguments(
+        output_dir="model/output/final",
+        num_train_epochs=best_params["no_of_epochs"],
+        learning_rate=best_params["learning_rate"],
+        weight_decay=best_params["weight_decay"],
+        per_device_train_batch_size=best_params["per_device_train_batch_size"],
+        fp16=best_params["fp16"],
+        report_to="wandb",
+        logging_steps=100,
+    )
+
+    trainer = transformers.Trainer(
+        model,
+        training_args,
+        train_dataset=tokenized_data,
+        data_collator=data_collator,
+    )
+    logger.info("Training model with best hyperparameters")
+    trainer.train()
+    logger.info("Training completed")
+
+    wandb.run.finish()
+
+    logger.info("Saving model and tokenizer")
+    model.save_pretrained("model/output/model")
+    tokenizer.save_pretrained("model/output/tokenizer")
+
+    logger.info("Model and tokenizer saved")
 
     return None
